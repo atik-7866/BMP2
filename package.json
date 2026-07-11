@@ -1,0 +1,19 @@
+{
+  "type": "module",
+  "scripts": {
+    "data_indexing" : "node ./data_indexing/index.js",
+    "dev": "node ./chatbot/index.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.27",
+    "@langchain/groq": "^1.1.2",
+    "@pinecone-database/pinecone": "^7.1.0",
+    "dotenv": "^17.3.1",
+    "fs": "^0.0.1-security",
+    "langchain": "^1.2.25",
+    "neo4j-driver": "^6.0.1",
+    "pdf-parse": "^2.4.5",
+    "readline-sync": "^1.4.10",
+    "zod": "^4.3.6"
+  }
+}
