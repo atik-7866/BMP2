@@ -1,7 +1,9 @@
-import { resolveEntities } from "./entityResolver.js";
-import { hybridRetrieve } from "./hybridRetrival.js";
+import { resolveEntities } from "./utils/entityResolver.js";
+import { hybridRetrieve } from "./retrival/hybridRetrival.js";
 import { generateAnswer } from "./utils/model.js";
 import readlineSync  from 'readline-sync';
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 export async function runQuery(query) {
 
@@ -16,8 +18,7 @@ export async function runQuery(query) {
   console.log("Generating answer...");
   const answer = await generateAnswer(query, results);
 
-  console.log("\nAnswer:\n");
-  console.log(answer);
+  return { answer, resolved, results };
 }
 
 async function main() {
@@ -27,9 +28,16 @@ async function main() {
     while (true) {
         const userProblem = readlineSync.question("Ask me anything--> ");
         if (userProblem == "exit") break;
-        await runQuery(userProblem);
+        const { answer } = await runQuery(userProblem);
+        console.log("\nAnswer:\n");
+        console.log(answer);
     }
 
 }
 
-main();
+const currentFile = fileURLToPath(import.meta.url);
+const invokedFile = process.argv[1] ? path.resolve(process.argv[1]) : "";
+
+if (currentFile === invokedFile) {
+  main();
+}

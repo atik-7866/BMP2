@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GroqModel1 } from "../config/config.js";
+import { GroqModel1 } from "../../config/config.js";
 
 const IntentSchema = z.object({
     movies: z.array(z.string()).nullish().transform(v => v ?? []),

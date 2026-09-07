@@ -14,8 +14,13 @@ async function main() {
     // const extractedData = await ExtractData(MovieText); // with help of AI
     const fileteredData = extractedData.filter(movie => movie.movie.title && movie.director.name && movie.actors.length && movie.genres.length ); // Remove Movies with missing title or director
 
-    // await uploadMoviesToPinecone(fileteredData);
     await buildGraph(fileteredData);
+
+    try {
+        await uploadMoviesToPinecone(fileteredData);
+    } catch (error) {
+        console.error("Pinecone indexing failed; Neo4j graph is still available:", error);
+    }
 
     console.log("Data Indexing Completed Successfully! ✅");
 }

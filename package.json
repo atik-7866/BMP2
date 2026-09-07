@@ -2,7 +2,8 @@
   "type": "module",
   "scripts": {
     "data_indexing" : "node ./data_indexing/index.js",
-    "dev": "node ./chatbot/index.js"
+    "dev": "node ./server.js",
+    "cli": "node ./chatbot/index.js"
   },
   "dependencies": {
     "@langchain/core": "^1.1.27",

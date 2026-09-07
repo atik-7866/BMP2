@@ -1,4 +1,4 @@
-import { driver } from "../config/config.js";
+import { driver } from "../../config/config.js";
 
 export async function graphSearch(entities) {
   const session = driver.session();
@@ -68,6 +68,18 @@ WHERE ANY(aw_filter IN $awards WHERE
 )
 WITH DISTINCT m`;
     }
+
+    // Do not return arbitrary movies when the entity resolver found no filters.
+    // Those unrelated records can be mistaken for evidence by the answer model.
+    const hasFilters = entities.movies.length > 0
+      || entities.year != null
+      || entities.actors.length > 0
+      || entities.directors.length > 0
+      || entities.genres.length > 0
+      || entities.themes.length > 0
+      || entities.awards.length > 0;
+
+    if (!hasFilters) return [];
 
     if (entities.resultType === "directors") {
       cypher += `
