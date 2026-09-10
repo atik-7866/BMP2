@@ -11,7 +11,7 @@ function movieToText(movie) {
         `;
 }
 
-const BATCH_SIZE = 50;   // optimal size
+const BATCH_SIZE = 50; 
 
 export async function uploadMoviesToPinecone(movies) {
 
@@ -24,7 +24,7 @@ export async function uploadMoviesToPinecone(movies) {
 
         batch.push({
             id: `movie_${i}`,
-            text: movieToText(movie),   // Pinecone generates embeddings
+            text: movieToText(movie),
             title: movie.movie.title,
             year: movie.movie.year,
             director: movie.director.name,
@@ -49,8 +49,6 @@ export async function uploadMoviesToPinecone(movies) {
             }
         }
     }
-
-    // Upload any remaining movies in the last batch
 
     if (erroBatch.length > 0) {
         console.log(`Retrying upload of ${erroBatch.length} movies...`);
