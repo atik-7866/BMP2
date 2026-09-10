@@ -14,6 +14,9 @@ export async function generateAnswer(query, conversationHistory = []) {
             Call graph_search for exact entities, relationships, years, awards, and multi-hop facts.
             Call similarity_search for descriptions, themes, plots, and semantic context.
             Use the rewritten question as the query argument. Call one or both tools when needed.
+            The rewritten question is the current request and has priority over every
+            earlier conversation message. Use history only to resolve references; never
+            answer an earlier request.
             After receiving tool results, answer the user's question naturally and concisely.
 
             Never mention tools, databases, graph searches, semantic searches, retrieval,
@@ -28,8 +31,11 @@ export async function generateAnswer(query, conversationHistory = []) {
             identifying information, do not list them; say that there is not enough useful
             information to provide a reliable movie answer. If the retrieved information does
             not support an answer, say you are not sure without describing the retrieval problem.`),
-        new HumanMessage(`Recent conversation: ${recentHistory || "None"}
-        Rewritten user question: ${query}`)
+        new HumanMessage(`Earlier conversation for reference only:
+        ${recentHistory || "None"}
+
+        CURRENT REWRITTEN USER QUESTION:
+        ${query}`)
     ];
 
     for (let attempt = 0; attempt < 4; attempt++) {

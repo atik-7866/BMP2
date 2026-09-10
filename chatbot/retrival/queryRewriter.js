@@ -14,10 +14,11 @@ export async function rewriteUserQuery(query, conversationHistory = []) {
 
     const result = await model.invoke(`
         Understand the user's intent before deciding whether retrieval is needed.
-        Use the recent conversation and the latest message together. The latest message
-        may be short, informal, misspelled, or refer to an earlier movie, person, genre,
+        Use the recent conversation only to resolve missing references. The latest message
+        is the user's current request and always has priority. Never answer an earlier
+        request from the conversation.
+        The latest message may be short, informal, misspelled, or refer to an earlier movie, person, genre,
         mood, or recommendation.
-
         Set isMovieQuestion to true for any movie-related intent, including requests to
         recommend a movie, requests made because the user is bored, comparisons,
         follow-up questions such as "any other one?", and questions about movies,
@@ -50,7 +51,7 @@ export async function rewriteUserQuery(query, conversationHistory = []) {
     Recent conversation:
     ${recentHistory || "None"}
 
-    Latest question: ${query}`);
+    CURRENT USER MESSAGE (highest priority): ${query}`);
 
     return result;
 }
