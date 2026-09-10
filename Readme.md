@@ -1,11 +1,6 @@
 # MovieKnowledge
 
-A GraphRAG project built using **Neo4j** and **Pinecone** to answer movie related answer.
-
-
-## Architecture
-
-![Architecture Diagram](docs/chatbot_arc.png)
+A GraphRAG project built using **Neo4j** and **Pinecone**.
 
 ## Setup
 

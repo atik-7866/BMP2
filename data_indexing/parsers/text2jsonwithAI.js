@@ -2,14 +2,13 @@ import { extractMovie1, extractMovie2 } from "../config_structured_models.js";
 
 export async function ExtractData(movieText) {
 
-    // const movieText = moviesText;
     console.log("Total blocks:", movieText.length);
 
     const movieJSON = [];
 
     for (let i = 0; i < movieText.length; i++) {
 
-        if (movieText[i].trim().length === 0) continue;  // skip empty blocks    
+        if (movieText[i].trim().length === 0) continue;
 
         try {
             const response1 = await extractMovie1(movieText[i]);
@@ -31,5 +30,3 @@ export async function ExtractData(movieText) {
 
     return movieJSON;
 }
-
-// await ExtractData("./Data/movies.pdf")

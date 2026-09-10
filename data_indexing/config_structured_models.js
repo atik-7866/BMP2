@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { GroqModel1, GroqModel2 } from "../config/config.js";
 
-// Schema for Movies
 const MovieSchema = 
     z.object({
         movie: z.object({
@@ -18,11 +17,9 @@ const MovieSchema =
     }
 );
 
-// Structured Model
 const structuredModel1 = GroqModel1.withStructuredOutput(MovieSchema);
 const structuredModel2 = GroqModel2.withStructuredOutput(MovieSchema);
 
-// Pass function
 export async function extractMovie1(text) {
     const response = await structuredModel1.invoke(` 
             Output this EXACT JSON structure:

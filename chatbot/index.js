@@ -1,22 +1,30 @@
-import { resolveEntities } from "./utils/entityResolver.js";
-import { hybridRetrieve } from "./retrival/hybridRetrival.js";
+import { rewriteUserQuery } from "./retrival/queryRewriter.js";
 import { generateAnswer } from "./utils/model.js";
 import readlineSync  from 'readline-sync';
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+
+const conversationHistory = [];
+
+function rememberConversation(userMessage, assistantMessage, intent) {
+  conversationHistory.push(
+    { role: "user", content: userMessage, ...(intent ? { intent } : {}) },
+    { role: "assistant", content: assistantMessage }
+  );
+  conversationHistory.splice(0, Math.max(0, conversationHistory.length - 6));
+}
 
 export async function runQuery(query) {
+  const rewriteResult = await rewriteUserQuery(query, conversationHistory);
 
-  console.log("Resolving entities...");
-  const resolved = await resolveEntities(query);
-
-//   console.log("Resolved Entities:", JSON.stringify(resolved, null, 2));
-
-  console.log("Retrieving data...");
-  const results = await hybridRetrieve(query, resolved);
+  if (!rewriteResult.isMovieQuestion) {
+    console.log("\nAnswer:\n");
+    console.log(rewriteResult.response);
+    rememberConversation(query, rewriteResult.response);
+    return;
+  }
 
   console.log("Generating answer...");
-  const answer = await generateAnswer(query, results);
+  const answer = await generateAnswer(rewriteResult.rewrittenQuery, conversationHistory);
+  rememberConversation(query, answer, rewriteResult.rewrittenQuery);
 
   return { answer, resolved, results };
 }
