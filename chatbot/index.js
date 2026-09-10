@@ -4,9 +4,9 @@ import readlineSync  from 'readline-sync';
 
 const conversationHistory = [];
 
-function rememberConversation(userMessage, assistantMessage, intent) {
+function rememberConversation(userMessage, assistantMessage) {
   conversationHistory.push(
-    { role: "user", content: userMessage, ...(intent ? { intent } : {}) },
+    { role: "user", content: userMessage },
     { role: "assistant", content: assistantMessage }
   );
   conversationHistory.splice(0, Math.max(0, conversationHistory.length - 6));
@@ -22,9 +22,9 @@ export async function runQuery(query) {
     return;
   }
 
-  console.log("Generating answer...");
+  console.log("\nGenerating answer...");
   const answer = await generateAnswer(rewriteResult.rewrittenQuery, conversationHistory);
-  rememberConversation(query, answer, rewriteResult.rewrittenQuery);
+  rememberConversation(query, answer);
 
   console.log("\nAnswer:\n");
   console.log(answer);
@@ -32,10 +32,10 @@ export async function runQuery(query) {
 
 async function main() {
 
-    console.log("Welcome to the Movie Knowledge Chatbot! Type 'exit' to quit.");
+    console.log("\nWelcome to the Movie Knowledge Chatbot! Type 'exit' to quit.\n");
 
     while (true) {
-        const userProblem = readlineSync.question("Ask me anything--> ");
+        const userProblem = readlineSync.question("\nAsk me anything--> ");
         if (userProblem == "exit") break;
         await runQuery(userProblem);
     }
