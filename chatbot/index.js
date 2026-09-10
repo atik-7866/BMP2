@@ -1,6 +1,6 @@
 import { rewriteUserQuery } from "./retrival/queryRewriter.js";
 import { generateAnswer } from "./utils/model.js";
-import readlineSync  from 'readline-sync';
+import readlineSync from 'readline-sync';
 
 const conversationHistory = [];
 
@@ -19,6 +19,8 @@ export async function runQuery(query) {
     console.log("\nAnswer:\n");
     console.log(rewriteResult.response);
     rememberConversation(query, rewriteResult.response);
+    console.log("-".repeat(100));
+
     return;
   }
 
@@ -28,17 +30,18 @@ export async function runQuery(query) {
 
   console.log("\nAnswer:\n");
   console.log(answer);
+  console.log("-".repeat(100));
 }
 
 async function main() {
 
-    console.log("\nWelcome to the Movie Knowledge Chatbot! Type 'exit' to quit.\n");
+  console.log("\nWelcome to the Movie Knowledge Chatbot! Type 'exit' to quit.\n");
 
-    while (true) {
-        const userProblem = readlineSync.question("\nAsk me anything--> ");
-        if (userProblem == "exit") break;
-        await runQuery(userProblem);
-    }
+  while (true) {
+    const userProblem = readlineSync.question("\nAsk me anything--> ");
+    if (userProblem == "exit") break;
+    await runQuery(userProblem);
+  }
 
 }
 
