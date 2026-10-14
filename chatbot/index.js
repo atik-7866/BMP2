@@ -1,48 +1,43 @@
-import { rewriteUserQuery } from "./retrival/queryRewriter.js";
+import { resolveEntities } from "./utils/entityResolver.js";
+import { hybridRetrieve } from "./retrival/hybridRetrival.js";
 import { generateAnswer } from "./utils/model.js";
-import readlineSync from 'readline-sync';
-
-const conversationHistory = [];
-
-function rememberConversation(userMessage, assistantMessage) {
-  conversationHistory.push(
-    { role: "user", content: userMessage },
-    { role: "assistant", content: assistantMessage }
-  );
-  conversationHistory.splice(0, Math.max(0, conversationHistory.length - 6));
-}
+import readlineSync  from 'readline-sync';
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 export async function runQuery(query) {
-  const rewriteResult = await rewriteUserQuery(query, conversationHistory);
 
-  if (!rewriteResult.isMovieQuestion) {
-    console.log("\nAnswer:\n");
-    console.log(rewriteResult.response);
-    rememberConversation(query, rewriteResult.response);
-    console.log("-".repeat(100));
+  console.log("Resolving entities...");
+  const resolved = await resolveEntities(query);
 
-    return;
-  }
+//   console.log("Resolved Entities:", JSON.stringify(resolved, null, 2));
 
-  console.log("\nGenerating answer...");
-  const answer = await generateAnswer(rewriteResult.rewrittenQuery, conversationHistory);
-  rememberConversation(query, answer);
+  console.log("Retrieving data...");
+  const results = await hybridRetrieve(query, resolved);
 
-  console.log("\nAnswer:\n");
-  console.log(answer);
-  console.log("-".repeat(100));
+  console.log("Generating answer...");
+  const answer = await generateAnswer(query, results);
+
+  return { answer, resolved, results };
 }
 
 async function main() {
 
-  console.log("\nWelcome to the Movie Knowledge Chatbot! Type 'exit' to quit.\n");
+    console.log("Welcome to the Movie Knowledge Chatbot! Type 'exit' to quit.");
 
-  while (true) {
-    const userProblem = readlineSync.question("\nAsk me anything--> ");
-    if (userProblem == "exit") break;
-    await runQuery(userProblem);
-  }
+    while (true) {
+        const userProblem = readlineSync.question("Ask me anything--> ");
+        if (userProblem == "exit") break;
+        const { answer } = await runQuery(userProblem);
+        console.log("\nAnswer:\n");
+        console.log(answer);
+    }
 
 }
 
-main();
+const currentFile = fileURLToPath(import.meta.url);
+const invokedFile = process.argv[1] ? path.resolve(process.argv[1]) : "";
+
+if (currentFile === invokedFile) {
+  main();
+}

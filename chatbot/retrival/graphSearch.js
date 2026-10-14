@@ -1,110 +1,216 @@
-import { z } from "zod";
-import { driver, GroqModel1 } from "../../config/config.js";
+import { driver } from "../../config/config.js";
 
-const QueryPlanSchema = z.object({
-  cypher: z.string().min(1),
-  params: z.string().default("{}")
-});
-
-const graphQueryPrompt = `
-  You are a Cypher query planner for a read-only movie knowledge graph.
-  Create one parameterized Cypher query for the rewritten question.
-
-  Graph structure:
-  - (:Movie {title: string, year: integer})
-  - (:Actor {name: string})-[:ACTED_IN]->(:Movie)
-  - (:Director {name: string})-[:DIRECTED]->(:Movie)
-  - (:Movie)-[:BELONGS_TO]->(:Genre {name: string})
-  - (:Movie)-[:EXPLORES]->(:Theme {name: string})
-  - (:Movie)-[:WON]->(:Award {name: string, category: string})
-
-  Rules:
-  - Return useful scalar values and collections with clear aliases.
-  - Use case-insensitive comparisons with toLower for names and titles.
-  - Use Cypher parameters for user-provided values; put them in params.
-  - Always include a LIMIT of 25 or less.
-  - Generate read-only Cypher only. Never use CREATE, MERGE, SET, DELETE, REMOVE,
-    DROP, LOAD CSV, FOREACH, CALL, or any procedure.
-  - Do not use multiple statements or semicolons.
-
-  Examples:
-  Question: Which movies did Tom Hanks act in that were directed by Robert Zemeckis?
-  Cypher:
-  MATCH (a:Actor)-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Director)
-  WHERE toLower(a.name) = toLower($actor) AND toLower(d.name) = toLower($director)
-  RETURN m.title AS movie, m.year AS year
-  ORDER BY year DESC LIMIT 25
-  Params: "{\"actor\":\"Tom Hanks\",\"director\":\"Robert Zemeckis\"}"
-
-  Question: Which actors worked with the director of Inception?
-  Cypher:
-  MATCH (director:Director)-[:DIRECTED]->(m:Movie {title: $movie})
-  MATCH (actor:Actor)-[:ACTED_IN]->(other:Movie)<-[:DIRECTED]-(director)
-  RETURN director.name AS director, actor.name AS actor,
-        collect(DISTINCT other.title) AS movies
-  LIMIT 25
-  Params: "{\"movie\":\"Inception\"}"
-
-  Question: What genres and themes are connected to movies that won an Oscar?
-  Cypher:
-  MATCH (m:Movie)-[:WON]->(award:Award)
-  WHERE toLower(award.name) = toLower($award)
-  OPTIONAL MATCH (m)-[:BELONGS_TO]->(genre:Genre)
-  OPTIONAL MATCH (m)-[:EXPLORES]->(theme:Theme)
-  RETURN m.title AS movie, collect(DISTINCT genre.name) AS genres,
-        collect(DISTINCT theme.name) AS themes
-  LIMIT 25
-  Params: "{\"award\":\"Oscar\"}"
-  `;
-
-const mutationPattern = /\b(CREATE|MERGE|SET|DELETE|REMOVE|DROP|LOAD\s+CSV|FOREACH|CALL|APOC|DBMS)\b/i;
-
-export function assertReadOnlyCypher(cypher) {
-  const normalized = cypher.trim();
-
-  if (!normalized || normalized.includes(";") || mutationPattern.test(normalized)) {
-    throw new Error("Generated Cypher was rejected because it is not a single read-only query.");
-  }
-
-  if (!/\bRETURN\b/i.test(normalized)) {
-    throw new Error("Generated Cypher was rejected because it does not return results.");
-  }
-
-  return normalized;
-}
-
-async function planQuery(query) {
-  const model = GroqModel1.withStructuredOutput(QueryPlanSchema);
-  const result = await model.invoke(`${graphQueryPrompt}
-
-  Return JSON with exactly two fields: cypher and params.
-  The params field must be a JSON-encoded string containing an object.
-  Rewritten question: ${query}`);
-
-  let params = {};
-  try {
-    params = JSON.parse(result.params);
-  } catch {
-    throw new Error("Generated Cypher parameters were not valid JSON.");
-  }
-
-  if (!params || Array.isArray(params) || typeof params !== "object") {
-    throw new Error("Generated Cypher parameters must be a JSON object.");
-  }
-
-  return {
-    cypher: assertReadOnlyCypher(result.cypher),
-    params
-  };
-}
-
-export async function graphSearch(query) {
+export async function graphSearch(entities) {
   const session = driver.session();
-  try {
-    const queryPlan = await planQuery(query);
-    const result = await session.run(queryPlan.cypher, queryPlan.params);
 
-    return result.records.map(record => record.toObject());
+  try {
+    let cypher = `MATCH (m:Movie)`;
+    const params = {};
+    const conditions = [];
+
+    if (entities.movies.length > 0) {
+      params.movies = entities.movies.map(m => m.toLowerCase());
+      conditions.push(`toLower(m.title) IN $movies`);
+    }
+
+    if (entities.year) {
+      params.year = entities.year;
+      conditions.push(`m.year = $year`);
+    }
+
+    if (conditions.length > 0)
+      cypher += `\nWHERE ` + conditions.join(" AND ");
+
+    cypher += `\nWITH DISTINCT m`;
+
+    if (entities.actors.length > 0) {
+      params.actors = entities.actors.map(a => a.toLowerCase());
+      cypher += `
+\nMATCH (a:Actor)-[:ACTED_IN]->(m)
+WHERE toLower(a.name) IN $actors
+WITH DISTINCT m`;
+    }
+
+    if (entities.directors.length > 0) {
+      params.directors = entities.directors.map(d => d.toLowerCase());
+      cypher += `
+\nMATCH (d:Director)-[:DIRECTED]->(m)
+WHERE toLower(d.name) IN $directors
+WITH DISTINCT m`;
+    }
+
+    if (entities.genres.length > 0) {
+      params.genres = entities.genres.map(g => g.toLowerCase());
+      cypher += `
+\nMATCH (m)-[:BELONGS_TO]->(g:Genre)
+WHERE toLower(g.name) IN $genres
+WITH DISTINCT m`;
+    }
+
+    if (entities.themes.length > 0) {
+      params.themes = entities.themes.map(t => t.toLowerCase());
+      cypher += `
+\nMATCH (m)-[:EXPLORES]->(t:Theme)
+WHERE toLower(t.name) IN $themes
+WITH DISTINCT m`;
+    }
+
+    if (entities.awards.length > 0) {
+      params.awards = entities.awards.map(a => ({
+        name:     a.name.toLowerCase(),
+        category: a.category ? a.category.toLowerCase() : null
+      }));
+      cypher += `
+\nMATCH (m)-[:WON]->(aw_f:Award)
+WHERE ANY(aw_filter IN $awards WHERE
+  toLower(aw_f.name) = aw_filter.name
+  AND (aw_filter.category IS NULL OR toLower(aw_f.category) = aw_filter.category)
+)
+WITH DISTINCT m`;
+    }
+
+    // Do not return arbitrary movies when the entity resolver found no filters.
+    // Those unrelated records can be mistaken for evidence by the answer model.
+    const hasFilters = entities.movies.length > 0
+      || entities.year != null
+      || entities.actors.length > 0
+      || entities.directors.length > 0
+      || entities.genres.length > 0
+      || entities.themes.length > 0
+      || entities.awards.length > 0;
+
+    if (!hasFilters) return [];
+
+    if (entities.resultType === "directors") {
+      cypher += `
+\nMATCH (d:Director)-[:DIRECTED]->(m)
+OPTIONAL MATCH (m)-[:WON]->(aw:Award)
+RETURN DISTINCT
+  d.name AS director,
+  collect(DISTINCT m.title) AS movies,
+  collect(DISTINCT
+    CASE WHEN aw IS NOT NULL
+         THEN aw.name + CASE WHEN aw.category IS NOT NULL
+                             THEN " (" + aw.category + ")"
+                             ELSE "" END
+    END
+  ) AS awards
+LIMIT 10`;
+    }
+
+    else if (entities.resultType === "actors") {
+      cypher += `
+\nMATCH (a:Actor)-[:ACTED_IN]->(m)
+OPTIONAL MATCH (m)-[:WON]->(aw:Award)
+RETURN DISTINCT
+  a.name AS actor,
+  collect(DISTINCT m.title) AS movies,
+  collect(DISTINCT
+    CASE WHEN aw IS NOT NULL
+         THEN aw.name + CASE WHEN aw.category IS NOT NULL
+                             THEN " (" + aw.category + ")"
+                             ELSE "" END
+    END
+  ) AS awards
+LIMIT 10`;
+    }
+
+    else if (entities.resultType === "awards") {
+      cypher += `
+\nMATCH (m)-[:WON]->(aw:Award)
+RETURN DISTINCT
+  aw.name     AS awardName,
+  aw.category AS awardCategory,
+  collect(DISTINCT m.title) AS movies
+LIMIT 10`;
+    }
+
+    else if (entities.resultType === "genres") {
+      cypher += `
+\nMATCH (m)-[:BELONGS_TO]->(g:Genre)
+RETURN DISTINCT
+  g.name AS genre,
+  collect(DISTINCT m.title) AS movies
+LIMIT 10`;
+    }
+
+    else if (entities.resultType === "themes") {
+      cypher += `
+\nMATCH (m)-[:EXPLORES]->(t:Theme)
+RETURN DISTINCT
+  t.name AS theme,
+  collect(DISTINCT m.title) AS movies
+LIMIT 10`;
+    }
+
+    else {
+      // Default — full movie detail
+      cypher += `
+\nOPTIONAL MATCH (d:Director)-[:DIRECTED]->(m)
+OPTIONAL MATCH (a:Actor)-[:ACTED_IN]->(m)
+OPTIONAL MATCH (m)-[:BELONGS_TO]->(g:Genre)
+OPTIONAL MATCH (m)-[:WON]->(aw:Award)
+RETURN DISTINCT
+  m.title AS movie,
+  m.year  AS year,
+  collect(DISTINCT d.name) AS directors,
+  collect(DISTINCT a.name) AS actors,
+  collect(DISTINCT g.name) AS genres,
+  collect(DISTINCT
+    CASE WHEN aw IS NOT NULL
+         THEN aw.name + CASE WHEN aw.category IS NOT NULL
+                             THEN " (" + aw.category + ")"
+                             ELSE "" END
+    END
+  ) AS awards
+LIMIT 10`;
+    }
+
+    const result = await session.run(cypher, params);
+
+    const cleanList = arr => (arr ?? []).filter(v => v != null && v !== "");
+
+    if (entities.resultType === "directors")
+      return result.records.map(r => ({
+        director: r.get("director"),
+        movies:   r.get("movies"),
+        awards:   cleanList(r.get("awards"))
+      }));
+
+    if (entities.resultType === "actors")
+      return result.records.map(r => ({
+        actor:  r.get("actor"),
+        movies: r.get("movies"),
+        awards: cleanList(r.get("awards"))
+      }));
+
+    if (entities.resultType === "awards")
+      return result.records.map(r => ({
+        award:  r.get("awardName") + (r.get("awardCategory") ? ` (${r.get("awardCategory")})` : ""),
+        movies: r.get("movies")
+      }));
+
+    if (entities.resultType === "genres")
+      return result.records.map(r => ({
+        genre:  r.get("genre"),
+        movies: r.get("movies")
+      }));
+
+    if (entities.resultType === "themes")
+      return result.records.map(r => ({
+        theme:  r.get("theme"),
+        movies: r.get("movies")
+      }));
+
+    return result.records.map(r => ({
+      movie:     r.get("movie"),
+      year:      r.get("year"),
+      directors: r.get("directors"),
+      actors:    r.get("actors"),
+      genres:    r.get("genres"),
+      awards:    cleanList(r.get("awards"))
+    }));
+
   } finally {
     await session.close();
   }

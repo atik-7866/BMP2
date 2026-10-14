@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Knowledge</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Movie Knowledge home">
+        <span class="brand-mark">MK</span>
+        <span>Movie Knowledge</span>
+      </a>
+      <span class="status"><i></i> GraphRAG search</span>
+    </header>
+
+    <section class="intro">
+      <p class="eyebrow">A connected film archive</p>
+      <h1>Ask the movies<br><em>better questions.</em></h1>
+      <p class="lede">Search across people, genres, themes, awards, and plot meaning in one conversation.</p>
+    </section>
+
+    <section class="search-panel" aria-label="Movie search">
+      <form id="search-form">
+        <label for="query">What would you like to discover?</label>
+        <div class="search-row">
+          <input id="query" name="query" autocomplete="off" placeholder="Try: Which movies explore revenge with strong female leads?" required>
+          <button type="submit"><span>Search archive</span><b>↗</b></button>
+        </div>
+      </form>
+      <div class="examples" aria-label="Example searches">
+        <button type="button" data-query="Which movies did Tom Hanks act in?">Tom Hanks filmography</button>
+        <button type="button" data-query="What themes does Inception explore?">Themes in Inception</button>
+        <button type="button" data-query="Which movies won an Oscar for Best Picture in 2020?">2020 Best Picture</button>
+      </div>
+    </section>
+
+    <section id="loading" class="loading" hidden>
+      <span class="loader"></span> Connecting the archive...
+    </section>
+
+    <section id="results" class="results" hidden>
+      <div class="answer-block">
+        <div class="section-kicker">Answer</div>
+        <p id="answer"></p>
+      </div>
+      <div class="evidence-grid">
+        <details open>
+          <summary><span>Graph matches</span><small id="graph-count"></small></summary>
+          <div id="graph-results" class="result-list"></div>
+        </details>
+        <details>
+          <summary><span>Semantic matches</span><small>From Pinecone</small></summary>
+          <pre id="semantic-results" class="semantic-results"></pre>
+        </details>
+      </div>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+    <footer><span>Neo4j + Pinecone + Groq</span><span>Local archive / 2026</span></footer>
+  </main>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

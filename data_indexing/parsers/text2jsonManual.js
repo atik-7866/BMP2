@@ -18,8 +18,10 @@ export function parseMovieBlock(text) {
 
     if (!line) continue;
 
+    // ignore page markers
     if (line.startsWith("--") && line.includes("of")) continue;
 
+    // single value fields
     if (line.startsWith("Movie Title:")) {
       result.movie.title = line.replace("Movie Title:", "").trim();
       continue;
@@ -35,6 +37,7 @@ export function parseMovieBlock(text) {
       continue;
     }
 
+    // detect sections
     if (line.startsWith("Actors:")) {
       currentSection = "actors";
       continue;
@@ -55,9 +58,11 @@ export function parseMovieBlock(text) {
       continue;
     }
 
+    // collect list items
     if (line.startsWith("-")) {
       const value = line.replace("-", "").trim();
 
+      // convert "None" → empty
       if (value.toLowerCase() === "none") continue;
 
       result[currentSection].push(value);
