@@ -32,3 +32,10 @@ async function main() {
   }
 
 }
+
+const currentFile = fileURLToPath(import.meta.url);
+const invokedFile = process.argv[1] ? path.resolve(process.argv[1]) : "";
+
+if (currentFile === invokedFile) {
+  main();
+}
