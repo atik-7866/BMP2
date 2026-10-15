@@ -11,7 +11,7 @@ async function main() {
     const extractedData = parseMoviesFromText(MovieText);
     const fileteredData = extractedData.filter(movie => movie.movie.title && movie.director.name && movie.actors.length && movie.genres.length );
 
-    // await uploadMoviesToPinecone(fileteredData);
+    await uploadMoviesToPinecone(fileteredData);
     await buildGraph(fileteredData);
 
     try {

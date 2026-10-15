@@ -1,5 +1,4 @@
-import { rewriteUserQuery } from "./retrival/queryRewriter.js";
-import { generateAnswer } from "./utils/model.js";
+import { getChatbotReply } from "./chat.js";
 import readlineSync from 'readline-sync';
 
 const conversationHistory = [];
@@ -13,24 +12,10 @@ function rememberConversation(userMessage, assistantMessage) {
 }
 
 export async function runQuery(query) {
-  const rewriteResult = await rewriteUserQuery(query, conversationHistory);
-
-  if (!rewriteResult.isMovieQuestion) {
-    console.log("\nAnswer:\n");
-    console.log(rewriteResult.response);
-    rememberConversation(query, rewriteResult.response);
-    console.log("-".repeat(100));
-
-    return;
-  }
-
   console.log("\nGenerating answer...");
-  const answer = await generateAnswer(rewriteResult.rewrittenQuery, conversationHistory);
+  const answer = await getChatbotReply(query, conversationHistory);
   rememberConversation(query, answer);
-
-  console.log("\nAnswer:\n");
-  console.log(answer);
-  console.log("-".repeat(100));
+  return answer;
 }
 
 async function main() {
@@ -40,7 +25,10 @@ async function main() {
   while (true) {
     const userProblem = readlineSync.question("\nAsk me anything--> ");
     if (userProblem == "exit") break;
-    await runQuery(userProblem);
+    const answer = await runQuery(userProblem);
+    console.log("\nAnswer:\n");
+    console.log(answer);
+    console.log("-".repeat(100));
   }
 
 }
