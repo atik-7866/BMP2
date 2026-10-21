@@ -25,6 +25,7 @@ app.post("/api/v1/search", async (req, res) => {
         }
 
         const ans = await runQuery(question);
+        console.log(ans);
 
         return res.status(200).json({
             success: true,
