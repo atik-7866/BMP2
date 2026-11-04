@@ -11,9 +11,9 @@ function rememberConversation(userMessage, assistantMessage) {
   conversationHistory.splice(0, Math.max(0, conversationHistory.length - 6));
 }
 
-export async function runQuery(query) {
+export async function runQuery(query, sessionId = "cli") {
   console.log("\nGenerating answer...");
-  const answer = await getChatbotReply(query, conversationHistory);
+  const answer = await getChatbotReply(query, conversationHistory, sessionId);
   rememberConversation(query, answer);
   return answer;
 }

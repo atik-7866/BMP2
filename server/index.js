@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { runQuery } from "./chatbot/index.js";
+import { testConnections } from "./config/config.js";
 
 const app = express();
 
@@ -24,7 +25,13 @@ app.post("/api/v1/search", async (req, res) => {
             });
         }
 
-        const ans = await runQuery(question);
+        const sessionId = typeof req.body.sessionId === "string"
+            && req.body.sessionId.trim()
+            && req.body.sessionId.length <= 128
+            ? req.body.sessionId.trim()
+            : undefined;
+
+        const ans = await runQuery(question, sessionId);
         console.log(ans);
 
         return res.status(200).json({
@@ -32,7 +39,7 @@ app.post("/api/v1/search", async (req, res) => {
             data: ans,
         });
     } catch (error) {
-        console.error(error);
+        console.log(error);
         return res.status(500).json({
             success: false,
             message: "Failed to process question",
@@ -40,6 +47,16 @@ app.post("/api/v1/search", async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+const start = async () => {
+    try {
+        await testConnections();
+        app.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+    }
+    catch (e) {
+        console.log(error);
+    }
+}
+
+await start();

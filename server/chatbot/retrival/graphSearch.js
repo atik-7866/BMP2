@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { driver, GroqModel1 } from "../../config/config.js";
+import { traceable } from "langsmith/traceable";
 
 const QueryPlanSchema = z.object({
   cypher: z.string().min(1),
@@ -98,14 +99,25 @@ async function planQuery(query) {
   };
 }
 
-export async function graphSearch(query) {
+const tracedPlanQuery = traceable(planQuery, {
+  name: "cypher_planner",
+  run_type: "chain"
+});
+
+const runCypher = traceable(async (cypher, params) => {
   const session = driver.session();
   try {
-    const queryPlan = await planQuery(query);
-    const result = await session.run(queryPlan.cypher, queryPlan.params);
-
+    const result = await session.run(cypher, params);
     return result.records.map(record => record.toObject());
   } finally {
     await session.close();
   }
+}, {
+  name: "neo4j_run",
+  run_type: "tool"
+});
+
+export async function graphSearch(query) {
+  const queryPlan = await tracedPlanQuery(query);
+  return runCypher(queryPlan.cypher, queryPlan.params);
 }

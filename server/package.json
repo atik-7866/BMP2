@@ -15,6 +15,7 @@
     "express": "^5.3.0",
     "fs": "^0.0.1-security",
     "langchain": "^1.2.25",
+    "langsmith": "^0.11.8",
     "neo4j-driver": "^6.0.1",
     "pdf-parse": "^2.4.5",
     "readline-sync": "^1.4.10",
