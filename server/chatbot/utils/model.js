@@ -1,9 +1,11 @@
 import { GroqModel1 } from "../../config/config.js";
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
+import { traceable } from "langsmith/traceable";
 import { createRetrievalTools } from "../retrival/retrievalTools.js";
 import { formatConversationHistory } from "./conversation.js";
 
-export async function generateAnswer(query, conversationHistory = []) {
+export const generateAnswer = traceable(
+  async function generateAnswer(query, conversationHistory = []) {
     const tools = createRetrievalTools();
     const toolMap = new Map(tools.map(retrievalTool => [retrievalTool.name, retrievalTool]));
     const model = GroqModel1.bindTools(tools);
@@ -18,6 +20,14 @@ export async function generateAnswer(query, conversationHistory = []) {
             earlier conversation message. Use history only to resolve references; never
             answer an earlier request.
             After receiving tool results, answer the user's question naturally and concisely.
+
+            Format every answer as clean Markdown that reads well in a chat window.
+            Never use tables, pipe-delimited text, separator rows, or ASCII-art layouts.
+            For recommendations, use a short introduction followed by a bulleted list.
+            Format each recommendation as **Movie title (year)** followed by one concise
+            sentence explaining why it matches the request. Include director or cast only
+            when useful and supported by the results. Keep the answer concise and avoid 
+            unnecessary headings or boilerplate.
 
             Never mention tools, databases, graph searches, semantic searches, retrieval,
             query rewriting, entity resolution, spelling corrections, or how the information
@@ -59,4 +69,6 @@ export async function generateAnswer(query, conversationHistory = []) {
     }
 
     return "I am not sure based on the available movie information.";
-}
+  },
+  { name: "generate_answer", run_type: "chain" }
+);

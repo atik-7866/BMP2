@@ -1,13 +1,14 @@
+import { traceable } from "langsmith/traceable";
 import { index } from "../../config/config.js";
 
-export async function similaritySearch(query) {
-
-  const results = await index.searchRecords({
-    query: {
-      inputs: { text: query },
-      topK: 7
-    }
-  });
-
-  return results;
-}
+export const similaritySearch = traceable(
+  async (query) => {
+    return index.searchRecords({
+      query: {
+        inputs: { text: query },
+        topK: 7
+      }
+    });
+  },
+  { name: "pinecone_search", run_type: "retriever" }
+);

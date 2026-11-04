@@ -51,7 +51,10 @@ export async function rewriteUserQuery(query, conversationHistory = []) {
     Recent conversation:
     ${recentHistory || "None"}
 
-    CURRENT USER MESSAGE (highest priority): ${query}`);
+    CURRENT USER MESSAGE (highest priority): ${query}`, {
+        runName: "rewrite_query",
+        tags: ["rewriter"],
+    });
 
     return result;
 }
