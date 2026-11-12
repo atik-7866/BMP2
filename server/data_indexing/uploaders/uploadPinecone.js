@@ -11,19 +11,14 @@ function movieToText(movie) {
         `;
 }
 
-const BATCH_SIZE = 50; 
+const BATCH_SIZE = 96;
 
 export async function uploadMoviesToPinecone(movies) {
+    console.log(`\n-------> Uploading movies to Pinecone (batch size: ${BATCH_SIZE})...\n`);
 
-    let batch = [];
-    let erroBatch = [];
-
-    for (let i = 0; i < movies.length; i++) {
-
-        const movie = movies[i];
-
-        batch.push({
-            id: `movie_${i}`,
+    for (let start = 0; start < movies.length; start += BATCH_SIZE) {
+        const batch = movies.slice(start, start + BATCH_SIZE).map((movie, offset) => ({
+            _id: `movie_${start + offset}`,
             text: movieToText(movie),
             title: movie.movie.title,
             year: movie.movie.year,
@@ -31,35 +26,21 @@ export async function uploadMoviesToPinecone(movies) {
             actors: movie.actors,
             genres: movie.genres,
             themes: movie.themes,
-            awards: movie.awards
+            awards: movie.awards,
+        }));
 
-        });
-
-        if (batch.length === BATCH_SIZE) {
-            try {
-                console.log(`Uploading batch of ${batch.length} movies...`);
-                await index.upsertRecords({ records: batch });
-                console.log(`Uploaded ${i + 1} movies`);
-                batch = [];
-            }
-            catch (error) {
-                console.error("Error uploading batch:", error);
-                erroBatch.push(...batch);
-                batch = [];
-            }
-        }
-    }
-
-    if (erroBatch.length > 0) {
-        console.log(`Retrying upload of ${erroBatch.length} movies...`);
+        const uploadedCount = start + batch.length;
         try {
-            await index.upsertRecords({ records: erroBatch });
-            console.log(`Successfully uploaded erroBatch of ${erroBatch.length} movies`);
+            await index.documents.upsert({ documents: batch });
         } catch (error) {
-            console.error("Error uploading erroBatch:", error);
+            console.error(`Error uploading movies ${start + 1}-${uploadedCount}:`, error);
+            throw error;
         }
+
+        console.log(
+            `-------> Uploaded ${uploadedCount}/${movies.length} movies to Pinecone ✅`
+        );
     }
 
-
-    console.log("✅ All movies uploaded to Pinecone");
+    console.log(`\n-------> All ${movies.length} movies uploaded to Pinecone. ✅`);
 }

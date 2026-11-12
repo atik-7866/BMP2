@@ -4,7 +4,7 @@ import { buildGraph } from "./uploaders/uploadNeo4j.js";
 import { parseMoviesFromText } from "./parsers/text2jsonManual.js";
 
 async function main() {
-    const filePath = "./data_indexing/data/movies.pdf";
+    const filePath = "./data_indexing/data/movies-real.pdf";
     const MovieText = await extractMoviesFromPDF(filePath);
     console.log("Movie Text Extracted:", MovieText.length, "characters");
 
@@ -13,12 +13,6 @@ async function main() {
 
     await uploadMoviesToPinecone(fileteredData);
     await buildGraph(fileteredData);
-
-    try {
-        await uploadMoviesToPinecone(fileteredData);
-    } catch (error) {
-        console.error("Pinecone indexing failed; Neo4j graph is still available:", error);
-    }
 
     console.log("Data Indexing Completed Successfully! ✅");
 }
