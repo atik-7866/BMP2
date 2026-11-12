@@ -9,7 +9,7 @@ export const pc = new Pinecone({
     apiKey: process.env.PINECONE_API_KEY,
 });
 
-export const index = pc.Index(process.env.PINECONE_INDEX);
+export const index = pc.index({ name: process.env.PINECONE_INDEX });
 
 export const driver = neo4j.driver(
     process.env.NEO4J_URI,
