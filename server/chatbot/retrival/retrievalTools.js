@@ -10,7 +10,14 @@ const querySchema = z.object({
 export function createRetrievalTools() {
   return [
     tool(
-      async ({ query }) => JSON.stringify(await graphSearch(query)),
+      async ({ query }) => {
+        const graphResults = await graphSearch(query);
+        if (graphResults.length > 0) {
+          return JSON.stringify(graphResults);
+        }
+
+        return JSON.stringify(await similaritySearch(query));
+      },
       {
         name: "graph_search",
         description: "Search the movie knowledge graph for exact entities, relationships, years, awards, and multi-hop facts.",

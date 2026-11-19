@@ -3,7 +3,7 @@ import { chatBoat } from "./api/api.js";
 import ReactMarkdown from "react-markdown";
 
 const examples = [
-  "Which movies feature both Zendaya and Leonardo DiCaprio?",
+  "Which movies feature both Zendaya and Christopher Walken?",
   "Which movies explore themes of Technology and Identity?",
   "Which directors have movies that won an Oscar for Best Picture?",
   "Find psychological thrillers released after 2010.",
