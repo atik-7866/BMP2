@@ -22,6 +22,15 @@ const graphQueryPrompt = `
   Rules:
   - Return useful scalar values and collections with clear aliases.
   - Use case-insensitive comparisons with toLower for names and titles.
+  - For names, genres, themes, awards, directors, actors, and titles, use
+    toLower(coalesce(value, "")) and contains(), or toLower(value) CONTAINS toLower($param).
+  - Prefer flexible matching over exact equality:
+    toLower(coalesce(g.name, "")) CONTAINS toLower($genre)
+  - Match useful alternatives without extra database lookups. If case differs or
+    one name is a partial name, contains matching should find the result.
+  - Do not require the user's spelling or capitalization to exactly equal a stored value.
+  - Use parameter names that identify the entity, for example $genre, $actor, $director,
+    $movie, $theme, or $award.
   - Use Cypher parameters for user-provided values; put them in params.
   - Always include a LIMIT of 25 or less.
   - Generate read-only Cypher only. Never use CREATE, MERGE, SET, DELETE, REMOVE,
@@ -74,6 +83,15 @@ export function assertReadOnlyCypher(cypher) {
   return normalized;
 }
 
+function normalizeParam(value) {
+  return String(value)
+    .normalize("NFKC")
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ");
+}
+
 async function planQuery(query) {
   const model = GroqModel1.withStructuredOutput(QueryPlanSchema);
   const result = await model.invoke(`${graphQueryPrompt}
@@ -91,6 +109,12 @@ async function planQuery(query) {
 
   if (!params || Array.isArray(params) || typeof params !== "object") {
     throw new Error("Generated Cypher parameters must be a JSON object.");
+  }
+
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") {
+      params[key] = normalizeParam(value);
+    }
   }
 
   return {
