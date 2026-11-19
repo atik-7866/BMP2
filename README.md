@@ -51,7 +51,7 @@ Together, they help the system answer structured and descriptive movie questions
 ## 4. Agent Architecture
 
 The chatbot uses a small retrieval agent flow.
-![Architecture](server\docs\chatbot_arc.png)
+![Architecture](./server/docs/chatbot_arc.png)
 
 ### Query Rewriter Agent
 
